@@ -2,7 +2,7 @@ bls-matlab
 ==========
 
 A basic Matlab class to pull data from the Bureau of Labor Statistics using
-their Public API: http://www.bls.gov/developers/home.htm.
+their Public API [here](http://www.bls.gov/developers/home.htm).
 
 Usage
 -----
@@ -12,9 +12,9 @@ Basic usage:
     b = bls();
     data = fetch(b, 'CUUR0000SA0');
 
-Or, register on the BLS website for a Public Data API account:
-http://data.bls.gov/registrationEngine/. Then, take advantage of the increased
-daily query limit and other features:
+Or, register on the BLS website for a Public Data API account
+[here](http://data.bls.gov/registrationEngine/). Then, take advantage of the
+increased daily query limit and other features:
 
     b = bls([], MY_API_KEY);
     data = fetch(b, 'SUUR0000SA0');
