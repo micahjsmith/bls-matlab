@@ -48,7 +48,7 @@ function d = fetch(c,s,varargin)
   %Return data for requested date range.
   if nargin == 2
     % No date range provided.
-    params = {};
+    dates = {};
 
   else
     % Start year provided.
@@ -77,7 +77,7 @@ function d = fetch(c,s,varargin)
       error('Too many input arguments.')
     end
 
-    params = {'startyear', startyear, 'endyear', endyear};
+    dates = {'startyear', startyear, 'endyear', endyear};
   end
 
   % Try registration key
@@ -89,15 +89,9 @@ function d = fetch(c,s,varargin)
 
   % Submit POST request to BLS.
   try
-    tmp = urlread(url, 'post', {params{:}, auth{:}, headers{:}});
+    tmp = urlread(url, 'post', {dates{:}, auth{:}, headers{:}});
   catch exception
     error('Error connecting to BLS servers.');
-  end
-
-  % Confirm JSONlab installed.
-  hasJsonLab = ~isempty(which('loadjson'));
-  if ~hasJsonLab
-    error('Must install JSONlab, available on Mathworks FileExchange.');
   end
 
   % Parse JSON.

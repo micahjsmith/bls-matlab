@@ -33,12 +33,8 @@ classdef bls
       DEFAULT_KEY = [];
 
       % Set URL 
-      if nargin>=1
-        if ~isempty(url)
-          obj.url = url;
-        else
-          obj.url = DEFAULT_URL;
-        end
+      if nargin>=1 & ~isempty(url)
+        obj.url = url;
       else
         obj.url = DEFAULT_URL;
       end
