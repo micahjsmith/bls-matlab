@@ -15,7 +15,7 @@ function d = fetch(c,s,varargin)
 
   % Input argument checking.
   if nargin < 2
-    error('Connection object and security list required.');
+    error('Connection object and series list required.');
   end
 
   % Validate series list.  Series list should be cell array string.
@@ -29,21 +29,12 @@ function d = fetch(c,s,varargin)
   % BLS requires uppercase series.
   s = upper(s);
 
-  % Make recursive call for multiple series input.
-  nSecurities = length(s);
-  if nSecurities > 1
-    for i = 1:nSecurities
-      d(i) = fetch(c,s(i),varargin{:});
-    end
-    return
-  end
-
   % Get initial url from connection handle, setup request.
   url = c.url;
   series = s(:);
   options = weboptions('MediaType','application/json');
 
-  % Format date range.
+  % Format date range/additional parameters
   if nargin == 2
     % No date range provided.
     dates = {};
@@ -91,26 +82,29 @@ function d = fetch(c,s,varargin)
             
   % Submit POST request to BLS.
   try
-    jsondata = webwrite(url, data, options);
+    response = webwrite(url, data, options);
   catch err
     error('Error connecting to BLS servers.');
   end
 
+  % Response okay?
+  if ~strcmpi(response.status,'REQUEST_SUCCEEDED')
+    warning('Request failed with message <''%s''>',response.message{:});
+    d.seriesId = [];
+    d.data = [];
+    return;
+  end
+  
   % Parse JSON.
-  if strcmpi(jsondata.status,'REQUEST_SUCCEEDED')
-    seriesId = jsondata.Results.series.seriesID;
-    data = arrayfun(@blsExtractDataField, jsondata.Results.series.data, 'un', 0);
+  nSeries = length(response.Results.series);
+  for iSeries = 1:nSeries
+    seriesId = response.Results.series(iSeries).seriesID;
+    data = arrayfun(@blsExtractDataField, response.Results.series(iSeries).data, 'un', 0);
     data = cell2mat(data);
     data = flipud(data);
-  else
-    seriesId = [];
-    data = [];
-    warning('Request failed with message <''%s''>',jsondata.message{:});
+    d(iSeries).SeriesID = seriesId;
+    d(iSeries).Data = data;
   end
-
-  % Create output struct.
-  d.SeriesID = seriesId;
-  d.Data = data;
 
 end % End of fetch function
 
