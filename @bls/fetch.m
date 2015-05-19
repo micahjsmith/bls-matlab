@@ -13,12 +13,12 @@ function d = fetch(c,s,varargin)
 %   Author: Micah Smith
 %   Date: April 2015
 
-  %Input argument checking.
+  % Input argument checking.
   if nargin < 2
     error('Connection object and security list required.');
   end
 
-  %Validate series list.  Series list should be cell array string.
+  % Validate series list.  Series list should be cell array string.
   if ischar(s)   
     s = cellstr(s);
   end
@@ -26,10 +26,10 @@ function d = fetch(c,s,varargin)
     error('Security list must be cell array of strings.');
   end
 
-  %BLS requires uppercase series.
+  % BLS requires uppercase series.
   s = upper(s);
 
-  %Make recursive call for multiple series input.
+  % Make recursive call for multiple series input.
   nSecurities = length(s);
   if nSecurities > 1
     for i = 1:nSecurities
@@ -38,14 +38,12 @@ function d = fetch(c,s,varargin)
     return
   end
 
-  %Get initial url from connection handle.
+  % Get initial url from connection handle, setup request.
   url = c.url;
+  series = s(:);
+  options = weboptions('MediaType','application/json');
 
-  %Add series to URL, prepare request.
-  url = [url, s{1}];
-  headers = {'Content-type', 'application/json'};
-
-  %Return data for requested date range.
+  % Format date range.
   if nargin == 2
     % No date range provided.
     dates = {};
@@ -86,26 +84,28 @@ function d = fetch(c,s,varargin)
   else
     auth = {};
   end
-
+  
+  data = struct('seriesid',{series},...
+                dates{:},...
+                auth{:});
+            
   % Submit POST request to BLS.
   try
-    tmp = urlread(url, 'post', {dates{:}, auth{:}, headers{:}});
-  catch exception
+    jsondata = webwrite(url, data, options);
+  catch err
     error('Error connecting to BLS servers.');
   end
 
   % Parse JSON.
-  jsondata = loadjson(tmp);
-  iSeries = 1;
   if strcmpi(jsondata.status,'REQUEST_SUCCEEDED')
-    seriesId = jsondata.Results.series{iSeries}.seriesID;
-    data = cellfun(@blsExtractDataField, jsondata.Results.series{iSeries}.data, 'un', 0);
-    data = cell2mat(data');
+    seriesId = jsondata.Results.series.seriesID;
+    data = arrayfun(@blsExtractDataField, jsondata.Results.series.data, 'un', 0);
+    data = cell2mat(data);
     data = flipud(data);
   else
     seriesId = [];
     data = [];
-    warning(sprintf('Request failed with message <''%s''>',jsondata.message{:}));
+    warning('Request failed with message <''%s''>',jsondata.message{:});
   end
 
   % Create output struct.
@@ -116,17 +116,17 @@ end % End of fetch function
 
 % Extract the date, value pair from this struct.
 function out = blsExtractDataField(field)
-  value = str2num(field.value);
+  value = str2double(field.value);
 
-  year = str2num(field.year);
+  year = str2double(field.year);
   period = field.period;
   % Monthly data
-  if ~isempty(regexp(period, 'M\d\d')) && ~strcmp(period, 'M13') 
-    myDate = datenum([year, str2num(period(2:3)),1]);
+  if ~isempty(regexp(period, 'M\d\d', 'once')) && ~strcmp(period, 'M13') 
+    myDate = datenum([year, str2double(period(2:3)),1]);
 
   % Quarterly data
   elseif regexp(period, 'Q\d\d')
-    myDate = datenum([year, 3*str2num(period(3))-2, 1]);
+    myDate = datenum([year, 3*str2double(period(3))-2, 1]);
 
   % Annual data
   elseif regexp(period, 'A\d\d')
@@ -135,7 +135,7 @@ function out = blsExtractDataField(field)
   % Not implemented.
   else
     myDate = NaN;
-    warning('Data from period ',field.periodName, ' not implemented');
+    warning(['Data from period ',field.periodName, ' not implemented']);
   end
 
   out = [myDate, value];

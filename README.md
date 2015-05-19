@@ -17,7 +17,7 @@ Or, register on the BLS website for a Public Data API account
 increased daily query limit and other features:
 
     b = bls([], MY_API_KEY);
-    data = fetch(b, 'SUUR0000SA0');
+    data = fetch(b, 'LAUCN040010000000005');
 
 Setup
 -----
@@ -33,10 +33,7 @@ Run
 
 That should do it. Check your `matlabpath` if you are having problems here.
 
-Dependencies
+Notes
 ------------
 
-Requires the excellent JSONlab from Mathworks' File Exchange
-[here](http://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files-in-matlab-octave).
-
-You should be able to run `which loadjson` and see a path.
+Requires Matlab 15a+ for the webservices/restful functionality.
