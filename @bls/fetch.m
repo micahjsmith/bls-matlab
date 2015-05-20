@@ -1,74 +1,64 @@
 function d = fetch(c,s,varargin)
 % FETCH Request data from BLS.
-%   D = FETCH(C,S) returns data for all fields from the BLS web site for given
-%   series, S, given the connection handle, C.
+%   D = FETCH(C,S) returns data from the BLS API for a given series or cell
+%   array of series, S, and connection handle, C.
 % 
-%   D = FETCH(C,S,D1) returns all data for the year D1.
+%   D = FETCH(C,S,D1) returns data for the year D1 to present.
 %
-%   D = FETCH(C,S,D1,D2) returns the data for the given series for the year 
-%   range D1 to D2.
+%   D = FETCH(C,S,D1,D2) returns data for the for the year range D1 to D2.
+%
+%   D = FETCH(___, 'Name', 'Value', ...) returns data given the name, value
+%   pairs. Currently, the only pair supported is 'catalog', 'true'.
 %
 %   See also BLS
 
 %   Author: Micah Smith
 %   Date: April 2015
 
-  % Input argument checking.
-  if nargin < 2
-    error('Connection object and series list required.');
+  % Validate arguments
+  validCatalogTrue = {'true','on'};
+  validCatalogFalse = {'false','off'};
+  validCatalog = {validCatalogTrue{:}, validCatalogFalse{:}};
+  defaultCatalog = 0;
+  defaultEndYear = datestr(now(), 'yyyy');
+  defaultStartYear = num2str(str2double(defaultEndYear)-9);
+  validationYear = ...
+    @(x) (ischar(x) && regexp(x, '\d\d\d\d')) || ...
+         (isnumeric(x) && isscalar(x) && (x>=1900));
+  validationCatalog = ...
+    @(x) (ischar(x) && any(strcmpi(x, validCatalog))) || ...
+         (isnumeric(x) && isscalar(x));
+  validationSeries = ...
+    @(x) ischar(x) || iscellstr(x);
+  p = inputParser();
+  addRequired(p, 's', validationSeries);
+  addOptional(p, 'startyear', defaultStartYear, validationYear);
+  addOptional(p, 'endyear', defaultEndYear, validationYear);
+  addParameter(p, 'catalog', defaultCatalog, validationCatalog);
+  parse(p, s, varargin{:});
+  startYear = p.Results.startyear;
+  endYear = p.Results.endyear;
+  if ischar(p.Results.catalog) && ...
+     any(strcmpi(p.Results.catalog, validCatalogTrue))
+    catalog = 1;
+  elseif isnumeric(p.Results.catalog) && p.Results.catalog > 0
+    catalog = 1;
+  else
+    catalog = 0;
   end
-
-  % Validate series list.  Series list should be cell array string.
-  if ischar(s)   
+  
+  % BLS specifies uppercase series.
+  if ischar(s)
     s = cellstr(s);
   end
-  if ~iscell(s) || ~ischar(s{1})
-    error('Security list must be cell array of strings.');
-  end
-
-  % BLS requires uppercase series.
   s = upper(s);
-
-  % Get initial url from connection handle, setup request.
+  
+  % Stup request and payload.
   url = c.url;
-  series = s(:);
   options = weboptions('MediaType','application/json');
-
-  % Format date range/additional parameters
-  if nargin == 2
-    % No date range provided.
-    dates = {};
-
-  else
-    % Start year provided.
-    if nargin == 3
-      d1 = num2str(varargin{1});
-      if regexp(d1, '\d\d\d\d')
-        startyear = d1;
-        endyear = d1;
-      else
-        error('D1 is a four-digit year.');
-      end
-
-    % End year provided.
-    elseif nargin == 4
-      d1 = num2str(varargin{1});
-      d2 = num2str(varargin{2});
-      if regexp(d1, '\d\d\d\d') && regexp(d2, '\d\d\d\d')
-        startyear = d1;
-        endyear = d2;
-      else
-        error('D1 and D2 are four-digit years.');
-      end
-
-    % Too many arguments.
-    elseif nargin > 4
-      error('Too many input arguments.')
-    end
-
-    dates = {'startyear', startyear, 'endyear', endyear};
-  end
-
+  dates = {'startyear', startYear, 'endyear', endYear};
+  params = {'catalog', catalog};
+  
   % Try registration key
   if ~isempty(c.key)
     auth = {'registrationKey',c.key};
@@ -76,8 +66,9 @@ function d = fetch(c,s,varargin)
     auth = {};
   end
   
-  data = struct('seriesid',{series},...
-                dates{:},...
+  data = struct('seriesid',{s}, ...
+                dates{:}, ...
+                params{:}, ...
                 auth{:});
             
   % Submit POST request to BLS.
@@ -89,17 +80,18 @@ function d = fetch(c,s,varargin)
 
   % Response okay?
   if ~strcmpi(response.status,'REQUEST_SUCCEEDED')
-    warning('Request failed with message <''%s''>',response.message{:});
-    d.seriesId = [];
-    d.data = [];
+    warning('Request failed with message ''%s''',response.message{:});
+    d.SeriesID = [];
+    d.Data = [];
     return;
   end
   
-  % Parse JSON.
+  % Parse response.
   nSeries = length(response.Results.series);
   for iSeries = 1:nSeries
     seriesId = response.Results.series(iSeries).seriesID;
-    data = arrayfun(@blsExtractDataField, response.Results.series(iSeries).data, 'un', 0);
+    data = arrayfun(@blsExtractDataField, ...
+                    response.Results.series(iSeries).data, 'un', 0);
     data = cell2mat(data);
     data = flipud(data);
     d(iSeries).SeriesID = seriesId;
@@ -129,7 +121,7 @@ function out = blsExtractDataField(field)
   % Not implemented.
   else
     myDate = NaN;
-    warning(['Data from period ',field.periodName, ' not implemented']);
+    error(['Data from period ',field.periodName, ' not implemented']);
   end
 
   out = [myDate, value];
