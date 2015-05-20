@@ -10,14 +10,14 @@ Usage
 Basic usage:
 
     b = bls();
-    data = fetch(b, 'CUUR0000SA0');
+    data = fetch(b, 'LNS11000000');
 
 Or, register on the BLS website for a Public Data API account
 [here](http://data.bls.gov/registrationEngine/). Then, take advantage of the
 increased daily query limit and other features:
 
     b = bls([], MY_API_KEY);
-    data = fetch(b, 'LAUCN040010000000005');
+    data = fetch(b, 'PRS85006092', 'catalog', 'true');
 
 Setup
 -----

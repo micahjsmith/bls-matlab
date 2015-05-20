@@ -1,7 +1,8 @@
 function d = fetch(c,s,varargin)
 % FETCH Request data from BLS.
 %   D = FETCH(C,S) returns data from the BLS API for a given series or cell
-%   array of series, S, and connection handle, C.
+%   array of series, S, and connection handle, C. Defaults to last 10 years of
+%   data.
 % 
 %   D = FETCH(C,S,D1) returns data for the year D1 to present.
 %
@@ -15,6 +16,10 @@ function d = fetch(c,s,varargin)
 %   Author: Micah Smith
 %   Date: April 2015
 
+  % Constants
+  BLS_RESPONSE_SUCCESS = 'REQUEST_SUCCEEDED';
+  BLS_RESPONSE_CATALOG_FAIL = 'unable to get catalog data';
+  
   % Validate arguments
   validCatalogTrue = {'true','on'};
   validCatalogFalse = {'false','off'};
@@ -79,22 +84,39 @@ function d = fetch(c,s,varargin)
   end
 
   % Response okay?
-  if ~strcmpi(response.status,'REQUEST_SUCCEEDED')
+  if ~strcmpi(response.status,BLS_RESPONSE_SUCCESS)
     warning('Request failed with message ''%s''',response.message{:});
     d.SeriesID = [];
     d.Data = [];
     return;
   end
   
+  % Catalog okay?
+  if catalog && ...
+     ~isempty(response.message) && ...
+     any(cell2mat(strfind(lower(response.message), BLS_RESPONSE_CATALOG_FAIL)))
+    catalogOkay = 0;
+  else
+    catalogOkay = 1;
+  end
+  
   % Parse response.
   nSeries = length(response.Results.series);
   for iSeries = 1:nSeries
-    seriesId = response.Results.series(iSeries).seriesID;
+    d(iSeries).SeriesID = response.Results.series(iSeries).seriesID;
+
+    if catalog 
+      if catalogOkay
+        d(iSeries).Catalog = response.Results.series(iSeries).catalog;
+      else
+        d(iSeries).Catalog = [];
+      end
+    end
+    
     data = arrayfun(@blsExtractDataField, ...
                     response.Results.series(iSeries).data, 'un', 0);
     data = cell2mat(data);
     data = flipud(data);
-    d(iSeries).SeriesID = seriesId;
     d(iSeries).Data = data;
   end
 
@@ -120,7 +142,6 @@ function out = blsExtractDataField(field)
 
   % Not implemented.
   else
-    myDate = NaN;
     error(['Data from period ',field.periodName, ' not implemented']);
   end
 
