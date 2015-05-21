@@ -36,4 +36,10 @@ That should do it. Check your `matlabpath` if you are having problems here.
 Notes
 ------------
 
-Requires Matlab 15a+ for the webservices/restful functionality.
+Requires Matlab 15a+ for the webservices/restful functionality. If you do not
+have access to Matlab 15a+, then the `compatible-lt-15a` stable branch allows
+you to enjoy this functionality at the expense of downloading the
+[urlread2](http://www.mathworks.com/matlabcentral/fileexchange/35693-urlread2)
+and
+[JSONlab](http://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files-in-matlab-octave)
+user-written packages from Mathworks File Exchange.
