@@ -19,6 +19,7 @@ function d = fetch(c,s,varargin)
   % Constants
   BLS_RESPONSE_SUCCESS = 'REQUEST_SUCCEEDED';
   BLS_RESPONSE_CATALOG_FAIL = 'unable to get catalog data';
+  FAKE_SERIES_NAME = '!@#$%^&*()';
   
   % Validate arguments
   validCatalogTrue = {'true','on'};
@@ -60,8 +61,8 @@ function d = fetch(c,s,varargin)
   
   % Stup request and payload.
   url = c.url;
-  headersIn.name = 'Content-Type';
-  headersIn.value = 'application/json';
+  header.name = 'Content-Type';
+  header.value = 'application/json';
   dates = {'startyear', startYear, 'endyear', endYear};
   params = {'catalog', catalog};
   
@@ -72,11 +73,23 @@ function d = fetch(c,s,varargin)
     auth = {};
   end
   
-  data = savejson('',struct('seriesid',{s},dates{:},params{:},auth{:}));
+  % Encode json string. Workaround for bug that single series not encoded as
+  % list by savejson.
+  if length(s)==1
+    s{end+1} = FAKE_SERIES_NAME;
+    hasFakeString = 1;
+  else
+    hasFakeString = 0;
+  end
+  data = savejson('',struct('seriesid',{s},dates{:},params{:},auth{:}), 'Compact', 1);
+  if hasFakeString
+    data = strrep(data, [',"',FAKE_SERIES_NAME,'"'],'');
+    %s{end} = [];
+  end
 
   % Submit POST request to BLS.
   try
-    responseJson = urlread2(url, 'POST', data, headersIn);
+    responseJson = urlread2(url, 'POST', data, header);
   catch err
     disp(err);
     error('Error connecting to BLS servers.');
