@@ -60,7 +60,8 @@ function d = fetch(c,s,varargin)
   
   % Stup request and payload.
   url = c.url;
-  options = weboptions('MediaType','application/json');
+  headersIn.name = 'Content-Type';
+  headersIn.value = 'application/json';
   dates = {'startyear', startYear, 'endyear', endYear};
   params = {'catalog', catalog};
   
@@ -71,17 +72,17 @@ function d = fetch(c,s,varargin)
     auth = {};
   end
   
-  data = struct('seriesid',{s}, ...
-                dates{:}, ...
-                params{:}, ...
-                auth{:});
-            
+  data = savejson('',struct('seriesid',{s},dates{:},params{:},auth{:}));
+
   % Submit POST request to BLS.
   try
-    response = webwrite(url, data, options);
+    responseJson = urlread2(url, 'POST', data, headersIn);
   catch err
+    disp(err);
     error('Error connecting to BLS servers.');
   end
+
+  response = loadjson(responseJson);
 
   % Response okay?
   if ~strcmpi(response.status,BLS_RESPONSE_SUCCESS)
@@ -103,18 +104,19 @@ function d = fetch(c,s,varargin)
   % Parse response.
   nSeries = length(response.Results.series);
   for iSeries = 1:nSeries
-    d(iSeries).SeriesID = response.Results.series(iSeries).seriesID;
+    d(iSeries).SeriesID = response.Results.series{iSeries}.seriesID;
 
     if catalog 
       if catalogOkay
-        d(iSeries).Catalog = response.Results.series(iSeries).catalog;
+        d(iSeries).Catalog = response.Results.series{iSeries}.catalog;
       else
         d(iSeries).Catalog = [];
       end
     end
     
-    data = arrayfun(@blsExtractDataField, ...
-                    response.Results.series(iSeries).data, 'un', 0);
+    data = cellfun(@blsExtractDataField, ...
+                    response.Results.series{iSeries}.data, 'un', 0);
+    data = data';
     data = cell2mat(data);
     data = flipud(data);
     d(iSeries).Data = data;
