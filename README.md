@@ -22,18 +22,27 @@ increased daily query limit and other features:
 Setup
 -----
 
-Navigate to a location where you store user-written Matlab code, such as:
+1. Navigate to a location where you store user-written Matlab code, such as:
 
     C:\Users\username\Documents\MATLAB
     /home/username/Documents/MATLAB
 
-Run
+2. Run
 
     git clone https://github.com/micahjsmith/bls-matlab.git
 
-That should do it. Check your `matlabpath` if you are having problems here.
+3. Install JSONlab from
+   [here](http://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files-in-matlab-octave)
+   and ensure that it is visible on your `matlabpath`.
+
+4. Install urlread2 from
+   [here](http://www.mathworks.com/matlabcentral/fileexchange/35693-urlread2)
+   and ensure that it is visible on your `matlabpath`.
+
+
 
 Notes
 ------------
 
-Requires Matlab 15a+ for the webservices/restful functionality.
+This branch facilitates usage of the package on Matlab before 15a by using the user packages
+`JSONlab` and `urlread2` to substitute for the missing `webread`.
