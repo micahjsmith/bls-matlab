@@ -1,15 +1,15 @@
 function d = fetch(c,s,varargin)
 % FETCH Request data from BLS.
 %   D = FETCH(C,S) returns data from the BLS API for a given series or cell
-%   array of series, S, and connection handle, C. Defaults to last 10 years of
-%   data.
+%   array of series, S, and connection handle, C. Defaults to last 10 years
+%   of data.
 % 
 %   D = FETCH(C,S,D1) returns data for the year D1 to present.
 %
 %   D = FETCH(C,S,D1,D2) returns data for the for the year range D1 to D2.
 %
 %   D = FETCH(___, 'Name', 'Value', ...) returns data given the name, value
-%   pairs. Currently, the only pair supported is 'catalog', 'true'.
+%   pairs. Currently, the only pair supported is ('catalog', 'true').
 %
 %   See also BLS
 
@@ -52,15 +52,14 @@ function d = fetch(c,s,varargin)
     catalog = 0;
   end
   
-  % BLS specifies uppercase series.
+  % BLS requires uppercase series.
   if ischar(s)
     s = cellstr(s);
   end
   s = upper(s);
   
-  % Stup request and payload.
+  % Setup request and payload.
   url = c.url;
-  options = weboptions('MediaType','application/json');
   dates = {'startyear', startYear, 'endyear', endYear};
   params = {'catalog', catalog};
   
@@ -71,14 +70,16 @@ function d = fetch(c,s,varargin)
     auth = {};
   end
   
-  data = struct('seriesid',{s}, ...
+  postdata = struct('seriesid',{s}, ...
                 dates{:}, ...
                 params{:}, ...
                 auth{:});
-            
-  % Submit POST request to BLS.
+        
+  options = weboptions('MediaType','application/json');
+
+  % Send POST request to BLS.
   try
-    response = webwrite(url, data, options);
+    response = webwrite(url, postdata, options);
   catch err
     error('Error connecting to BLS servers.');
   end
