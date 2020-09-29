@@ -113,8 +113,18 @@ function d = fetch(c,s,varargin)
       end
     end
     
-    data = arrayfun(@blsExtractDataField, ...
-                    response.Results.series(iSeries).data, 'un', 0);
+    try
+        % usually the response data is parsed as a structure array
+        data = arrayfun(@blsExtractDataField, ...
+                        response.Results.series(iSeries).data, 'un', 0);
+    catch
+        % In some cases, the BLS API returns additional fields for only
+        % some observations, such as `latest: true`, causing the response
+        % data to be parsed as a cell array
+        data = cellfun(@blsExtractDataField, ...
+                        response.Results.series(iSeries).data, 'un', 0);
+    end
+   
     data = cell2mat(data);
     data = flipud(data);
     d(iSeries).Data = data;
